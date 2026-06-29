@@ -1,0 +1,40 @@
+name: backend
+
+services:
+  api:
+    user: "${UID}:${GID}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: api-local
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT} # Triggers Uvicorn reload in entrypoint.sh
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST} # Required for entrypoint.sh pg_isready
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+    volumes:
+      # Hot-reload mapping: Maps local app/ folder into the container
+      - ./app:/app/app
+      # Hot-reload mapping: Alembic migrations & config
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    ports:
+      - "8000:8000"
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    external: true

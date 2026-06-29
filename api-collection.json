@@ -1,0 +1,570 @@
+{
+  "info": {
+    "name": "FastAPI Backend Boilerplate",
+    "description": "API collection for FastAPI Backend Boilerplate — all endpoints under /api/v1.\n\nImport into Postman or Bruno to test the APIs interactively.\n\n**Auth flow:**\n1. `POST /api/v1/users/register` — create an account\n2. `POST /api/v1/auth/login` — get access + refresh tokens\n3. Copy the `access_token` into the collection variable `accessToken` (or set it manually on each request)\n4. Use `GET /api/v1/auth/profile` to test authentication\n\n**Token refresh:**\nWhen the access token expires (15 min default), call `POST /api/v1/auth/refresh` with your refresh token.\n\n**Logout:**\nCall `POST /api/v1/auth/logout` with your refresh token in the body and your access token in the `Authorization: Bearer` header. Both tokens are required and will be blacklisted.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check database and Redis connectivity."
+          },
+          "response": [
+            {
+              "name": "200 — All services healthy",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"database\": \"ok\",\n    \"redis\": \"ok\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate with email and password to receive a JWT access+refresh token pair.\n\nThe access token is valid for 15 minutes. The refresh token is valid for 7 days.\n\nAfter login, copy the `access_token` to the collection variable `accessToken`."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"token_type\": \"bearer\"\n  }\n}"
+            },
+            {
+              "name": "401 — Invalid credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_CREDENTIALS\",\n      \"message\": \"Invalid email or password.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "403 — Account suspended",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 403,\n  \"errors\": [\n    {\n      \"code\": \"ACCOUNT_SUSPENDED\",\n      \"message\": \"Account is suspended.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — Validation error",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"VALIDATION_ERROR\",\n      \"field\": \"email\",\n      \"message\": \"value is not a valid email address\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"eyJhbGciOiJIUzI1NiIs...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Exchange a valid refresh token for a new access+refresh token pair.\n\nThe old refresh token is immediately blacklisted (token rotation) so it cannot be reused.\n\nAfter refresh, copy the new `access_token` to the collection variable `accessToken`."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"token_type\": \"bearer\"\n  }\n}"
+            },
+            {
+              "name": "401 — Token expired",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"TOKEN_EXPIRED\",\n      \"message\": \"Refresh token has expired.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 — Token blacklisted",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"TOKEN_BLACKLISTED\",\n      \"message\": \"Refresh token has been revoked.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 — Invalid token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_TOKEN\",\n      \"message\": \"Invalid refresh token.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"eyJhbGciOiJIUzI1NiIs...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revoke both the refresh token (request body) and the access token (`Authorization` header). Both are required.\n\nEach token's JTI is added to the Redis blacklist for the remainder of its natural lifetime.\n\nIf a token has already expired, it is silently skipped (no-op)."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"Logged out successfully.\"\n  }\n}"
+            },
+            {
+              "name": "401 — Invalid refresh token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_TOKEN\",\n      \"message\": \"Invalid refresh token.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 — Invalid access token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_TOKEN\",\n      \"message\": \"Invalid access token.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "403 — Missing Authorization header",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"detail\": \"Not authenticated\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Return the authenticated user's profile.\n\nRequires a valid access token in the `Authorization` header.\n\nResults are cached in Redis for 5 minutes."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"active\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-10T14:22:00Z\"\n  }\n}"
+            },
+            {
+              "name": "401 — No token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_TOKEN\",\n      \"message\": \"Authentication required.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 — Expired token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 401,\n  \"errors\": [\n    {\n      \"code\": \"TOKEN_EXPIRED\",\n      \"message\": \"Access token has expired.\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "POST /users/register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"Str0ng!Pass\",\n  \"password2\": \"Str0ng!Pass\",\n  \"username\": \"newuser\",\n  \"phone_number\": \"+1234567890\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            },
+            "description": "Register a new user account.\n\nPassword requirements:\n- At least 8 characters\n- At least one uppercase letter\n- At least one special character\n\nPhone number must be in E.164 format (e.g., +1234567890).\n\nUsername and phone number must be unique.\n\nOn success, publishes a `UserRegisteredEvent` to the event bus."
+          },
+          "response": [
+            {
+              "name": "201 — Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 201,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"newuser@example.com\",\n    \"username\": \"newuser\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"New\",\n    \"last_name\": \"User\",\n    \"status\": \"pending_verification\",\n    \"created_at\": \"2026-05-16T08:15:00Z\",\n    \"updated_at\": \"2026-05-16T08:15:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 — Email already taken",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 409,\n  \"errors\": [\n    {\n      \"code\": \"USER_ALREADY_EXISTS\",\n      \"message\": \"A user with this email already exists.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — Weak password",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"VALIDATION_ERROR\",\n      \"field\": \"password\",\n      \"message\": \"Value error, Password must be at least 8 characters long.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — Password mismatch",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"PASSWORDS_DO_NOT_MATCH\",\n      \"message\": \"Passwords do not match.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — Invalid phone",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"INVALID_PHONE_NUMBER\",\n      \"message\": \"Phone number already in use.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users (list)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?status=active&include_deleted=false&offset=0&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "status", "value": "active", "description": "Filter by status. Values: pending_verification, active, inactive, suspended, deleted" },
+                { "key": "include_deleted", "value": "false", "description": "Include soft-deleted users. Default: false" },
+                { "key": "offset", "value": "0", "description": "Number of records to skip" },
+                { "key": "limit", "value": "20", "description": "Max records to return (1-100, default 20)" }
+              ]
+            },
+            "description": "Retrieve a paginated list of users.\n\nSupports optional filtering by status and soft-deleted state.\nExcludes soft-deleted users by default."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"items\": [\n      {\n        \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n        \"email\": \"user@example.com\",\n        \"username\": \"johndoe\",\n        \"phone_number\": \"+1234567890\",\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\",\n        \"status\": \"active\",\n        \"created_at\": \"2026-05-01T10:30:00Z\",\n        \"updated_at\": \"2026-05-10T14:22:00Z\"\n      }\n    ],\n    \"total\": 42,\n    \"offset\": 0,\n    \"limit\": 20\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/by-uuid/{uuid}",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/by-uuid/0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "by-uuid", "0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5"]
+            },
+            "description": "Look up a user by their UUID v7 identifier."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"active\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-10T14:22:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/by-username/{username}",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/by-username/johndoe",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "by-username", "johndoe"]
+            },
+            "description": "Look up a user by their unique username."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"active\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-10T14:22:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/by-email/{email}",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/by-email/user@example.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "by-email", "user@example.com"]
+            },
+            "description": "Look up a user by their email address."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"active\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-10T14:22:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/{uuid}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5", "status"]
+            },
+            "description": "Update a user's account status.\n\nAllowed status values: `pending_verification`, `active`, `suspended`.\n\nNote: `inactive` and `deleted` statuses are set automatically by the delete/prune endpoints — they cannot be set directly here."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"active\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-16T09:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — Cannot set inactive",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"CANNOT_UPDATE_TO_INACTIVE\",\n      \"message\": \"Cannot set status to inactive via this endpoint. Use DELETE instead.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /users/{uuid} (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5"]
+            },
+            "description": "Soft-delete a user by setting their status to `inactive` and recording the deletion timestamp in `deleted_at`.\n\nThis is reversible — use the restore endpoint to recover the user."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"inactive\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-16T09:30:00Z\",\n    \"deleted_at\": \"2026-05-16T09:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/by-uuid/{uuid}/restore",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/by-uuid/0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "by-uuid", "0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5", "restore"]
+            },
+            "description": "Restore a soft-deleted user.\n\nClears the `deleted_at` timestamp and resets the status to `pending_verification`.\n\nOnly works on users that were previously soft-deleted (status `inactive` with a `deleted_at` timestamp)."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"pending_verification\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-16T09:45:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "422 — User was not deleted",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 422,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_DELETED\",\n      \"message\": \"User was not soft-deleted.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /users/{uuid}/prune (permanent)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5/prune",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5", "prune"]
+            },
+            "description": "Permanently delete a user from the database.\n\n**This action cannot be undone.** The user record is removed entirely.\n\nUse the soft-delete endpoint for reversible deletions."
+          },
+          "response": [
+            {
+              "name": "200 — Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"status\": \"success\",\n  \"statusCode\": 200,\n  \"data\": {\n    \"uuid\": \"0192b400-c6d4-7a3f-9e12-f8a1b2c3d4e5\",\n    \"email\": \"user@example.com\",\n    \"username\": \"johndoe\",\n    \"phone_number\": \"+1234567890\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"status\": \"deleted\",\n    \"created_at\": \"2026-05-01T10:30:00Z\",\n    \"updated_at\": \"2026-05-16T10:00:00Z\",\n    \"deleted_at\": \"2026-05-16T10:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 — User not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"status\": \"fail\",\n  \"statusCode\": 404,\n  \"errors\": [\n    {\n      \"code\": \"USER_NOT_FOUND\",\n      \"message\": \"User not found.\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

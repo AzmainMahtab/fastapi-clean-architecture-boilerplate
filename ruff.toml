@@ -1,0 +1,60 @@
+target-version = "py314"
+line-length = 120
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "RUF",  # ruff-specific
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "N999",  # too strict for non-global packages
+]
+
+[lint.per-file-ignores]
+"**/tests/**" = [
+    "N802",  # allow lowercase test function names
+    "B008",  # allow function calls in argument defaults
+]
+"app/core/settings.py" = [
+    "N802",  # uppercase property names match env vars
+]
+"app/core/response.py" = [
+    "N815",  # statusCode is JSEND API contract, not a naming violation
+]
+"app/modules/user/api/dependencies.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/user/api/router.py" = [
+    "B008",  # Depends()/Query() in defaults is required FastAPI pattern
+]
+"app/modules/auth/api/router.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/auth/api/dependencies.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/user/domain/interfaces.py" = [
+    "B008",  # PaginationParams is frozen, safe as default
+]
+"app/modules/user/infrastructure/persistence/repository.py" = [
+    "B008",  # PaginationParams is frozen, safe as default
+]
+[lint.pydocstyle]
+convention = "google"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true
+line-ending = "lf"
+
+[lint.isort]
+known-first-party = ["app"]
+split-on-trailing-comma = false

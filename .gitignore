@@ -1,0 +1,46 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Code editor files
+.vscode/
+.idea/
+
+# Docker volumes data
+postgres_data/
+redis_data/
+*.swp       # Neovim swap files (since you use LazyVim)
+*.swo       # Neovim swap files
+
+# Environment variables (NEVER commit actual secrets!)
+.env       
+.env.local
+
+# Python Tool Caches
+.pytest_cache/  
+.mypy_cache/     
+.ruff_cache/    
+htmlcov/        
+.coverage        
+
+# Docker Related
+postgres_data/
+redis_data/
+docker-compose.override.yml  
+
+# OS Specific (Good hygiene)
+.DS_Store    
+Thumbs.db    
+.opencode
+graphify-out
+AGENTS.md
+opencode.json
+.claude
+
