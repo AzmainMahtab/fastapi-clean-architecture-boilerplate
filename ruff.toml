@@ -76,6 +76,30 @@ ignore = [
 "app/modules/owner/infrastructure/persistence/models.py" = [
     "UP037",  # SQLAlchemy forward references require quotes
 ]
+"app/modules/rbac/api/dependencies.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/rbac/api/router.py" = [
+    "B008",  # Depends()/Query() in defaults is required FastAPI pattern
+]
+"app/modules/rbac/domain/interfaces.py" = [
+    "B008",  # PaginationParams is frozen, safe as default
+]
+"app/modules/rbac/infrastructure/persistence/repository.py" = [
+    "B008",  # PaginationParams is frozen, safe as default
+]
+"app/modules/rbac/infrastructure/persistence/models.py" = [
+    "UP037",  # SQLAlchemy forward references require quotes
+]
+"app/modules/otp/api/dependencies.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/otp/api/router.py" = [
+    "B008",  # Depends() in defaults is required FastAPI pattern
+]
+"app/modules/otp/infrastructure/persistence/mapper.py" = [
+    "UP037",  # SQLAlchemy forward references require quotes
+]
 [lint.pydocstyle]
 convention = "google"
 

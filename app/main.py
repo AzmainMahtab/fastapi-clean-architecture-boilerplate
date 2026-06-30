@@ -6,7 +6,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.cache import NullCache, RedisCache, create_redis_client
+from app.core.database import AsyncSessionLocal
 from app.core.event_bus import InMemoryEventBus
+from app.core.seed import seed_superuser
 from app.core.exception_handlers import (
     app_exception_handler,
     auth_exception_handler,
@@ -28,6 +30,7 @@ from app.modules.otp.api.router import router as otp_router
 from app.modules.otp.infrastructure.event_handlers import create_generate_login_otp_handler
 from app.modules.owner.api.router import router as owner_router
 from app.modules.rbac.api.router import router as rbac_router
+from app.modules.rbac.domain.exception import RbacError
 from app.modules.user.api.router import router as user_router
 from app.modules.user.domain.events import UserUpdatedEvent
 
@@ -53,6 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     login_otp_handler = create_generate_login_otp_handler(app.state.cache_service, app.state.event_bus)
     app.state.event_bus.subscribe(UserLoggedInEvent, login_otp_handler)
 
+    await seed_superuser()
+
     yield
     app.state.event_bus = None
     if isinstance(app.state.cache_service, RedisCache):
@@ -66,10 +71,6 @@ app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
-
-# RBAC exception handler uses the RbacError base class
-from app.modules.rbac.domain.exception import RbacError
-
 app.add_exception_handler(RbacError, rbac_exception_handler)
 
 app.add_middleware(

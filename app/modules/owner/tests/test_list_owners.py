@@ -1,10 +1,10 @@
 import pytest
 
 from app.core.pagination import PaginationParams
+from app.modules.owner.cqrs.command import CreateOwnerCommand
 from app.modules.owner.cqrs.query import ListOwnersQuery
 from app.modules.owner.use_cases.create_owner import CreateOwnerUseCase
 from app.modules.owner.use_cases.list_owners import ListOwnersUseCase
-from app.modules.owner.cqrs.command import CreateOwnerCommand
 
 
 @pytest.mark.asyncio

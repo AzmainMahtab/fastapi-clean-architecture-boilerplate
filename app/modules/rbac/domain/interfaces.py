@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from app.core.pagination import PaginationParams
-from app.modules.rbac.domain.entities import Permission, Role
+from app.modules.rbac.domain.entities import Permission, Role, RolePermissionAssignment, UserRoleAssignment
 
 
 class IRbacRepository(ABC):
@@ -47,7 +47,9 @@ class IRbacRepository(ABC):
 
     # Role <-> Permission
     @abstractmethod
-    async def assign_permission_to_role(self, role_id: int, permission_id: int) -> None:
+    async def assign_permission_to_role(
+        self, role_id: int, permission_id: int, assigned_by: int | None = None
+    ) -> None:
         pass
 
     @abstractmethod
@@ -60,7 +62,9 @@ class IRbacRepository(ABC):
 
     # User <-> Role
     @abstractmethod
-    async def assign_role_to_user(self, user_id: int, role_id: int) -> None:
+    async def assign_role_to_user(
+        self, user_id: int, role_id: int, assigned_by: int | None = None
+    ) -> None:
         pass
 
     @abstractmethod
@@ -81,4 +85,16 @@ class IRbacRepository(ABC):
 
     @abstractmethod
     async def user_has_role(self, user_id: int, role_name: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def get_user_ids_for_role(self, role_id: int) -> list[int]:
+        pass
+
+    @abstractmethod
+    async def get_user_role_assignments(self, user_id: int) -> list[UserRoleAssignment]:
+        pass
+
+    @abstractmethod
+    async def get_role_permission_assignments(self, role_id: int) -> list[RolePermissionAssignment]:
         pass

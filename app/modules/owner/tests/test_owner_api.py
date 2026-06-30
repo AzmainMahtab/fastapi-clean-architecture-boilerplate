@@ -6,7 +6,11 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app as fastapi_app
 from app.modules.auth.api.dependencies import require_authenticated_user
-from app.modules.owner.api.dependencies import get_create_owner_use_case, get_get_owner_use_case, get_list_owners_use_case
+from app.modules.owner.api.dependencies import (
+    get_create_owner_use_case,
+    get_get_owner_use_case,
+    get_list_owners_use_case,
+)
 from app.modules.owner.tests.conftest import InMemoryOwnerRepository
 from app.modules.owner.use_cases.create_owner import CreateOwnerUseCase
 from app.modules.owner.use_cases.get_owner import GetOwnerUseCase

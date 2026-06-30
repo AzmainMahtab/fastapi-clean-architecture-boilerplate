@@ -3,11 +3,16 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import ICacheService
+from app.core.cache import ICacheService, NullCache
 from app.core.database import get_db
 from app.core.event_bus import IEventBus
 from app.core.jwt import JWTService
-from app.modules.auth.domain.exception import InvalidTokenError, PermissionDeniedError, TokenBlacklistedError, TokenExpiredError
+from app.modules.auth.domain.exception import (
+    InvalidTokenError,
+    PermissionDeniedError,
+    TokenBlacklistedError,
+    TokenExpiredError,
+)
 from app.modules.auth.use_cases.login import LoginUseCase
 from app.modules.auth.use_cases.logout import LogoutUseCase
 from app.modules.auth.use_cases.profile import GetProfileUseCase
@@ -35,7 +40,7 @@ def get_cache_service(request: Request) -> ICacheService:
     """Dependency provider for the application's cache service.
 
     Retrieves the ``ICacheService`` instance stored on ``app.state``
-    during application startup.
+    during application startup. Falls back to ``NullCache`` if not set.
 
     Args:
         request: The incoming HTTP request.
@@ -43,7 +48,7 @@ def get_cache_service(request: Request) -> ICacheService:
     Returns:
         Either a ``RedisCache`` or ``NullCache`` instance.
     """
-    return request.app.state.cache_service
+    return getattr(request.app.state, "cache_service", NullCache())
 
 
 def get_event_bus(request: Request) -> IEventBus:
@@ -262,15 +267,30 @@ def require_permission(permission: str):
             ...
 
     Superusers bypass all permission checks automatically.
+
+    Permission lookups are cached per-user for 5 minutes to avoid
+    hitting the database on every protected request.
     """
 
     async def _dependency(
         user: User = Depends(require_authenticated_user),
         rbac_repo: IRbacRepository = Depends(get_rbac_repo),
+        cache: ICacheService = Depends(get_cache_service),
     ) -> User:
         if user.is_superuser:
             return user
-        has_perm = await rbac_repo.user_has_permission(user.id, permission)
+
+        cache_key = f"user_permissions:{user.id}"
+        cached_perms = await cache.get(cache_key)
+
+        if cached_perms is not None:
+            has_perm = permission in cached_perms
+        else:
+            perms = await rbac_repo.get_user_permissions(user.id)
+            perm_names = [p.name for p in perms]
+            await cache.set(cache_key, perm_names, ttl=300)
+            has_perm = permission in perm_names
+
         if not has_perm:
             raise PermissionDeniedError(f"Permission '{permission}' required.")
         return user

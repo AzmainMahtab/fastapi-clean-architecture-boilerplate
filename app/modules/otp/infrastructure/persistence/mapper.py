@@ -1,9 +1,8 @@
+import uuid
+
 from app.modules.otp.domain.entities import OneTimePassword
 from app.modules.otp.domain.value_objects import OtpType
 from app.modules.otp.infrastructure.persistence.models import OtpModel
-
-
-import uuid
 
 
 def map_to_domain(orm_model: OtpModel) -> OneTimePassword:

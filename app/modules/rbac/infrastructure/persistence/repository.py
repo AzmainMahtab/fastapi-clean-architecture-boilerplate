@@ -9,8 +9,8 @@ from app.modules.rbac.infrastructure.persistence.mapper import map_permission_to
 from app.modules.rbac.infrastructure.persistence.models import (
     PermissionModel,
     RoleModel,
-    role_permissions,
-    user_roles,
+    RolePermissionModel,
+    UserRoleModel,
 )
 
 
@@ -33,13 +33,19 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         return map_permission_to_domain(orm)
 
     async def get_permission_by_name(self, name: str) -> Permission | None:
-        stmt = select(PermissionModel).where(PermissionModel.name == name)
+        stmt = select(PermissionModel).where(
+            PermissionModel.name == name,
+            PermissionModel.deleted_at.is_(None),
+        )
         result = await self.session.execute(stmt)
         orm = result.scalar_one_or_none()
         return map_permission_to_domain(orm) if orm else None
 
     async def get_permission_by_uuid(self, uuid: str) -> Permission | None:
-        stmt = select(PermissionModel).where(PermissionModel.uuid == uuid)
+        stmt = select(PermissionModel).where(
+            PermissionModel.uuid == uuid,
+            PermissionModel.deleted_at.is_(None),
+        )
         result = await self.session.execute(stmt)
         orm = result.scalar_one_or_none()
         return map_permission_to_domain(orm) if orm else None
@@ -48,7 +54,7 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         self,
         pagination: PaginationParams = PaginationParams(),
     ) -> tuple[list[Permission], int]:
-        base = select(PermissionModel)
+        base = select(PermissionModel).where(PermissionModel.deleted_at.is_(None))
         count_stmt = select(func.count()).select_from(base.subquery())
         total_result = await self.session.execute(count_stmt)
         total = total_result.scalar_one()
@@ -68,13 +74,20 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         return map_role_to_domain(orm, include_permissions=False)
 
     async def get_role_by_name(self, name: str) -> Role | None:
-        stmt = select(RoleModel).where(RoleModel.name == name)
+        stmt = select(RoleModel).where(
+            RoleModel.name == name,
+            RoleModel.deleted_at.is_(None),
+        )
         result = await self.session.execute(stmt)
         orm = result.scalar_one_or_none()
         return map_role_to_domain(orm) if orm else None
 
     async def get_role_by_uuid(self, uuid: str) -> Role | None:
-        stmt = select(RoleModel).where(RoleModel.uuid == uuid).options(selectinload(RoleModel.permissions))
+        stmt = (
+            select(RoleModel)
+            .where(RoleModel.uuid == uuid, RoleModel.deleted_at.is_(None))
+            .options(selectinload(RoleModel.permissions))
+        )
         result = await self.session.execute(stmt)
         orm = result.scalar_one_or_none()
         return map_role_to_domain(orm) if orm else None
@@ -83,7 +96,9 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         self,
         pagination: PaginationParams = PaginationParams(),
     ) -> tuple[list[Role], int]:
-        base = select(RoleModel).options(selectinload(RoleModel.permissions))
+        base = select(RoleModel).where(RoleModel.deleted_at.is_(None)).options(
+            selectinload(RoleModel.permissions)
+        )
         count_stmt = select(func.count()).select_from(base.subquery())
         total_result = await self.session.execute(count_stmt)
         total = total_result.scalar_one()
@@ -95,31 +110,33 @@ class SQLAlchemyRbacRepository(IRbacRepository):
 
     # Role <-> Permission
 
-    async def assign_permission_to_role(self, role_id: int, permission_id: int) -> None:
-        stmt = select(role_permissions).where(
-            role_permissions.c.role_id == role_id,
-            role_permissions.c.permission_id == permission_id,
-        )
-        result = await self.session.execute(stmt)
-        if result.first():
+    async def assign_permission_to_role(
+        self, role_id: int, permission_id: int, assigned_by: int | None = None
+    ) -> None:
+        existing = await self.session.get(RolePermissionModel, (role_id, permission_id))
+        if existing:
             return  # Already assigned
-        await self.session.execute(
-            role_permissions.insert().values(role_id=role_id, permission_id=permission_id)
+        self.session.add(
+            RolePermissionModel(
+                role_id=role_id,
+                permission_id=permission_id,
+                assigned_by=assigned_by,
+            )
         )
 
     async def remove_permission_from_role(self, role_id: int, permission_id: int) -> None:
-        await self.session.execute(
-            role_permissions.delete().where(
-                role_permissions.c.role_id == role_id,
-                role_permissions.c.permission_id == permission_id,
-            )
-        )
+        rp = await self.session.get(RolePermissionModel, (role_id, permission_id))
+        if rp:
+            await self.session.delete(rp)
 
     async def get_role_permissions(self, role_id: int) -> list[Permission]:
         stmt = (
             select(PermissionModel)
-            .join(role_permissions, PermissionModel.id == role_permissions.c.permission_id)
-            .where(role_permissions.c.role_id == role_id)
+            .join(RolePermissionModel, PermissionModel.id == RolePermissionModel.permission_id)
+            .where(
+                RolePermissionModel.role_id == role_id,
+                PermissionModel.deleted_at.is_(None),
+            )
         )
         result = await self.session.execute(stmt)
         orms = result.scalars().all()
@@ -127,31 +144,33 @@ class SQLAlchemyRbacRepository(IRbacRepository):
 
     # User <-> Role
 
-    async def assign_role_to_user(self, user_id: int, role_id: int) -> None:
-        stmt = select(user_roles).where(
-            user_roles.c.user_id == user_id,
-            user_roles.c.role_id == role_id,
-        )
-        result = await self.session.execute(stmt)
-        if result.first():
+    async def assign_role_to_user(
+        self, user_id: int, role_id: int, assigned_by: int | None = None
+    ) -> None:
+        existing = await self.session.get(UserRoleModel, (user_id, role_id))
+        if existing:
             return  # Already assigned
-        await self.session.execute(
-            user_roles.insert().values(user_id=user_id, role_id=role_id)
+        self.session.add(
+            UserRoleModel(
+                user_id=user_id,
+                role_id=role_id,
+                assigned_by=assigned_by,
+            )
         )
 
     async def remove_role_from_user(self, user_id: int, role_id: int) -> None:
-        await self.session.execute(
-            user_roles.delete().where(
-                user_roles.c.user_id == user_id,
-                user_roles.c.role_id == role_id,
-            )
-        )
+        ur = await self.session.get(UserRoleModel, (user_id, role_id))
+        if ur:
+            await self.session.delete(ur)
 
     async def get_user_roles(self, user_id: int) -> list[Role]:
         stmt = (
             select(RoleModel)
-            .join(user_roles, RoleModel.id == user_roles.c.role_id)
-            .where(user_roles.c.user_id == user_id)
+            .join(UserRoleModel, RoleModel.id == UserRoleModel.role_id)
+            .where(
+                UserRoleModel.user_id == user_id,
+                RoleModel.deleted_at.is_(None),
+            )
             .options(selectinload(RoleModel.permissions))
         )
         result = await self.session.execute(stmt)
@@ -162,9 +181,14 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         stmt = (
             select(PermissionModel)
             .distinct()
-            .join(role_permissions, PermissionModel.id == role_permissions.c.permission_id)
-            .join(user_roles, role_permissions.c.role_id == user_roles.c.role_id)
-            .where(user_roles.c.user_id == user_id)
+            .join(RolePermissionModel, PermissionModel.id == RolePermissionModel.permission_id)
+            .join(UserRoleModel, RolePermissionModel.role_id == UserRoleModel.role_id)
+            .where(
+                UserRoleModel.user_id == user_id,
+                PermissionModel.deleted_at.is_(None),
+                RoleModel.deleted_at.is_(None),
+            )
+            .join(RoleModel, RoleModel.id == UserRoleModel.role_id)
         )
         result = await self.session.execute(stmt)
         orms = result.scalars().all()
@@ -174,9 +198,15 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         stmt = (
             select(func.count())
             .select_from(PermissionModel)
-            .join(role_permissions, PermissionModel.id == role_permissions.c.permission_id)
-            .join(user_roles, role_permissions.c.role_id == user_roles.c.role_id)
-            .where(user_roles.c.user_id == user_id, PermissionModel.name == permission_name)
+            .join(RolePermissionModel, PermissionModel.id == RolePermissionModel.permission_id)
+            .join(UserRoleModel, RolePermissionModel.role_id == UserRoleModel.role_id)
+            .join(RoleModel, RoleModel.id == UserRoleModel.role_id)
+            .where(
+                UserRoleModel.user_id == user_id,
+                PermissionModel.name == permission_name,
+                PermissionModel.deleted_at.is_(None),
+                RoleModel.deleted_at.is_(None),
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one() > 0
@@ -185,8 +215,63 @@ class SQLAlchemyRbacRepository(IRbacRepository):
         stmt = (
             select(func.count())
             .select_from(RoleModel)
-            .join(user_roles, RoleModel.id == user_roles.c.role_id)
-            .where(user_roles.c.user_id == user_id, RoleModel.name == role_name)
+            .join(UserRoleModel, RoleModel.id == UserRoleModel.role_id)
+            .where(
+                UserRoleModel.user_id == user_id,
+                RoleModel.name == role_name,
+                RoleModel.deleted_at.is_(None),
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one() > 0
+
+    async def get_user_ids_for_role(self, role_id: int) -> list[int]:
+        stmt = select(UserRoleModel.user_id).where(UserRoleModel.role_id == role_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_user_role_assignments(self, user_id: int) -> list[UserRoleAssignment]:
+        from app.modules.rbac.domain.entities import UserRoleAssignment
+
+        stmt = (
+            select(RoleModel, UserRoleModel)
+            .join(UserRoleModel, RoleModel.id == UserRoleModel.role_id)
+            .where(
+                UserRoleModel.user_id == user_id,
+                RoleModel.deleted_at.is_(None),
+            )
+        )
+        result = await self.session.execute(stmt)
+        assignments = []
+        for role_orm, ur_orm in result.all():
+            assignments.append(
+                UserRoleAssignment(
+                    role=map_role_to_domain(role_orm, include_permissions=False),
+                    assigned_by=ur_orm.assigned_by,
+                    assigned_at=ur_orm.assigned_at,
+                )
+            )
+        return assignments
+
+    async def get_role_permission_assignments(self, role_id: int) -> list[RolePermissionAssignment]:
+        from app.modules.rbac.domain.entities import RolePermissionAssignment
+
+        stmt = (
+            select(PermissionModel, RolePermissionModel)
+            .join(RolePermissionModel, PermissionModel.id == RolePermissionModel.permission_id)
+            .where(
+                RolePermissionModel.role_id == role_id,
+                PermissionModel.deleted_at.is_(None),
+            )
+        )
+        result = await self.session.execute(stmt)
+        assignments = []
+        for perm_orm, rp_orm in result.all():
+            assignments.append(
+                RolePermissionAssignment(
+                    permission=map_permission_to_domain(perm_orm),
+                    assigned_by=rp_orm.assigned_by,
+                    assigned_at=rp_orm.assigned_at,
+                )
+            )
+        return assignments
