@@ -1,5 +1,6 @@
 from app.core.event_bus import IEventBus
 from app.core.hasher import get_password_hash
+from app.core.settings import settings
 from app.modules.user.cqrs.command import RegisterUserCommand
 from app.modules.user.cqrs.result import RegisterUserResult
 from app.modules.user.domain.entities import User
@@ -49,6 +50,10 @@ class RegisterUserUseCase:
             first_name=command.first_name,
             last_name=command.last_name,
         )
+
+        # First superuser gets automatic superuser privileges
+        if settings.FIRST_SUPERUSER_EMAIL and command.email == str(settings.FIRST_SUPERUSER_EMAIL):
+            new_user.is_superuser = True
 
         saved_user = await self.user_repo.create(new_user)
 

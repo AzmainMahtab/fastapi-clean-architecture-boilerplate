@@ -71,6 +71,7 @@ class UserResponse(BaseModel):
     first_name: str | None = Field(default=None, description="Optional first name.")
     last_name: str | None = Field(default=None, description="Optional last name.")
     status: UserStatus = Field(description="Current account status.")
+    is_superuser: bool = Field(default=False, description="Whether the user has superuser privileges.")
     created_at: datetime | None = Field(default=None, description="Timestamp of account creation.")
     updated_at: datetime | None = Field(default=None, description="Timestamp of last update.")
     deleted_at: datetime | None = Field(default=None, description="Timestamp of soft deletion, if applicable.")
@@ -93,6 +94,7 @@ class UserResponse(BaseModel):
             first_name=user.first_name,
             last_name=user.last_name,
             status=user.status.value if hasattr(user.status, "value") else user.status,
+            is_superuser=user.is_superuser,
             created_at=user.created_at,
             updated_at=user.updated_at,
             deleted_at=user.deleted_at,

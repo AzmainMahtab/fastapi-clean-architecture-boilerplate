@@ -38,6 +38,10 @@ class AccountAlreadyActiveError(AuthenticationError):
     """Raised when attempting to activate an account that is already active."""
 
 
+class PermissionDeniedError(AuthenticationError):
+    """Raised when the authenticated user lacks the required permission."""
+
+
 # Map domain exceptions to machine-readable codes and HTTP statuses.
 # Single source of truth — imported by both router and exception handlers.
 AUTH_EXCEPTIONS: dict[type[AuthenticationError], tuple[str, int]] = {
@@ -49,4 +53,5 @@ AUTH_EXCEPTIONS: dict[type[AuthenticationError], tuple[str, int]] = {
     InvalidTokenError: ("INVALID_TOKEN", 401),
     UserNotFoundError: ("USER_NOT_FOUND", 404),
     AccountAlreadyActiveError: ("ACCOUNT_ALREADY_ACTIVE", 409),
+    PermissionDeniedError: ("PERMISSION_DENIED", 403),
 }

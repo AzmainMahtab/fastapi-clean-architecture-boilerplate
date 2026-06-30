@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
+from app.core.auth import require_permission
 from app.core.exceptions import AppException
 from app.core.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PaginationParams
 from app.core.response import CleanRoute, ErrorEnvelope, SuccessEnvelope
@@ -31,7 +32,9 @@ def _map_error(exc: Exception) -> AppException:
     "",
     response_model=SuccessEnvelope[CarResponse],
     status_code=201,
+    responses={403: {"model": ErrorEnvelope, "description": "Permission denied"}},
     summary="Create a new car",
+    dependencies=[Depends(require_permission("car:create"))],
 )
 async def create_car(request: CreateCarRequest, use_case: CreateCarUseCase = Depends(get_create_car_use_case)):
     command = CreateCarCommand(
@@ -49,8 +52,12 @@ async def create_car(request: CreateCarRequest, use_case: CreateCarUseCase = Dep
 @router.get(
     "/{uuid}",
     response_model=SuccessEnvelope[CarResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "Car not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "Car not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get car by UUID",
+    dependencies=[Depends(require_permission("car:read"))],
 )
 async def get_by_uuid(uuid: str, use_case: GetCarUseCase = Depends(get_get_car_use_case)):
     query = GetCarByUuidQuery(uuid=uuid)
@@ -65,7 +72,9 @@ async def get_by_uuid(uuid: str, use_case: GetCarUseCase = Depends(get_get_car_u
 @router.get(
     "/by-owner/{owner_id}",
     response_model=SuccessEnvelope[CarListResponse],
+    responses={403: {"model": ErrorEnvelope, "description": "Permission denied"}},
     summary="List cars by owner ID",
+    dependencies=[Depends(require_permission("car:read"))],
 )
 async def list_by_owner(
     owner_id: int,
@@ -89,7 +98,13 @@ async def list_by_owner(
     )
 
 
-@router.get("", response_model=SuccessEnvelope[CarListResponse], summary="List all cars")
+@router.get(
+    "",
+    response_model=SuccessEnvelope[CarListResponse],
+    responses={403: {"model": ErrorEnvelope, "description": "Permission denied"}},
+    summary="List all cars",
+    dependencies=[Depends(require_permission("car:read"))],
+)
 async def list_cars(
     offset: int = Query(default=0, ge=0, description="Number of records to skip for pagination."),
     limit: int = Query(

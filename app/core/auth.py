@@ -7,6 +7,6 @@ boundaries and violating encapsulation boundaries within the
 modular monolith.
 """
 
-from app.modules.auth.api.dependencies import require_authenticated, require_authenticated_user
+from app.modules.auth.api.dependencies import require_authenticated, require_authenticated_user, require_permission
 
-__all__ = ["require_authenticated", "require_authenticated_user"]
+__all__ = ["require_authenticated", "require_authenticated_user", "require_permission"]

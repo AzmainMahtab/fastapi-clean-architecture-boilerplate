@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
+from app.core.auth import require_permission
 from app.core.exceptions import AppException
 from app.core.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PaginationParams
 from app.core.response import CleanRoute, ErrorEnvelope, SuccessEnvelope
@@ -38,8 +39,10 @@ def _map_error(exc: Exception) -> AppException:
     status_code=201,
     responses={
         409: {"model": ErrorEnvelope, "description": "Owner already exists for user"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
     },
     summary="Create a new owner",
+    dependencies=[Depends(require_permission("owner:create"))],
 )
 async def create_owner(request: CreateOwnerRequest, use_case: CreateOwnerUseCase = Depends(get_create_owner_use_case)):
     command = CreateOwnerCommand(
@@ -58,8 +61,12 @@ async def create_owner(request: CreateOwnerRequest, use_case: CreateOwnerUseCase
 @router.get(
     "/{uuid}",
     response_model=SuccessEnvelope[OwnerResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "Owner not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "Owner not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get owner by UUID",
+    dependencies=[Depends(require_permission("owner:read"))],
 )
 async def get_by_uuid(uuid: str, use_case: GetOwnerUseCase = Depends(get_get_owner_use_case)):
     query = GetOwnerByUuidQuery(uuid=uuid)
@@ -74,8 +81,12 @@ async def get_by_uuid(uuid: str, use_case: GetOwnerUseCase = Depends(get_get_own
 @router.get(
     "/by-user/{user_id}",
     response_model=SuccessEnvelope[OwnerResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "Owner not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "Owner not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get owner by user ID",
+    dependencies=[Depends(require_permission("owner:read"))],
 )
 async def get_by_user_id(user_id: int, use_case: GetOwnerUseCase = Depends(get_get_owner_use_case)):
     query = GetOwnerByUserIdQuery(user_id=user_id)
@@ -87,7 +98,13 @@ async def get_by_user_id(user_id: int, use_case: GetOwnerUseCase = Depends(get_g
     return SuccessEnvelope(statusCode=200, data=OwnerResponse.from_entity(owner))
 
 
-@router.get("", response_model=SuccessEnvelope[OwnerListResponse], summary="List all owners")
+@router.get(
+    "",
+    response_model=SuccessEnvelope[OwnerListResponse],
+    responses={403: {"model": ErrorEnvelope, "description": "Permission denied"}},
+    summary="List all owners",
+    dependencies=[Depends(require_permission("owner:read"))],
+)
 async def list_owners(
     offset: int = Query(default=0, ge=0, description="Number of records to skip for pagination."),
     limit: int = Query(

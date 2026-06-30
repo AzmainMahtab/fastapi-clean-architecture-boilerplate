@@ -5,11 +5,27 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app as fastapi_app
+from app.modules.auth.api.dependencies import require_authenticated_user
 from app.modules.car.api.dependencies import get_create_car_use_case, get_get_car_use_case, get_list_cars_use_case
 from app.modules.car.tests.conftest import InMemoryCarRepository
 from app.modules.car.use_cases.create_car import CreateCarUseCase
 from app.modules.car.use_cases.get_car import GetCarUseCase
 from app.modules.car.use_cases.list_cars import ListCarsUseCase
+from app.modules.user.domain.entities import User, UserStatus
+from app.modules.user.domain.value_objects import Email, HashedPassword, PhoneNumber
+
+
+def _mock_superuser() -> User:
+    return User(
+        id=1,
+        uuid="mock-user-uuid",
+        email=Email("mock@example.com"),
+        hashed_password=HashedPassword("mock"),
+        username="mockuser",
+        phone_number=PhoneNumber("+1234567890"),
+        is_superuser=True,
+        status=UserStatus.ACTIVE,
+    )
 
 
 @pytest.fixture
@@ -22,6 +38,7 @@ def override_car_deps(app: FastAPI, car_repo: InMemoryCarRepository) -> Generato
     app.dependency_overrides[get_create_car_use_case] = lambda: CreateCarUseCase(car_repo=car_repo)
     app.dependency_overrides[get_get_car_use_case] = lambda: GetCarUseCase(car_repo=car_repo)
     app.dependency_overrides[get_list_cars_use_case] = lambda: ListCarsUseCase(car_repo=car_repo)
+    app.dependency_overrides[require_authenticated_user] = _mock_superuser
     yield
     app.dependency_overrides.clear()
 
