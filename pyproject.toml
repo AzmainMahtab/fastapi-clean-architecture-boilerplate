@@ -40,6 +40,8 @@ testpaths = [
     "app/modules/user/tests",
     "app/core/tests",
     "app/modules/otp/tests",
+    "app/modules/owner/tests",
+    "app/modules/car/tests",
 ]
 
 [tool.pyright]
