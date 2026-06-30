@@ -47,7 +47,9 @@ class RoleResponse(BaseModel):
     uuid: str = Field(description="Role UUID.")
     name: str = Field(description="Role name.")
     description: str | None = Field(default=None, description="Role description.")
-    permissions: list[PermissionResponse] = Field(default_factory=list, description="Permissions assigned to this role.")
+    permissions: list[PermissionResponse] = Field(
+        default_factory=list, description="Permissions assigned to this role."
+    )
     created_at: datetime | None = Field(default=None, description="Timestamp of creation.")
     updated_at: datetime | None = Field(default=None, description="Timestamp of last update.")
 

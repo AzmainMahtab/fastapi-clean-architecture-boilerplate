@@ -52,7 +52,7 @@ async def test_generate_otp_caches_plaintext(otp_repo, cache, event_bus):
     use_case = GenerateOtpUseCase(otp_repo=otp_repo, cache=cache, event_bus=event_bus)
     command = GenerateOtpCommand(user_uuid="user-789", otp_type=OtpType.LOGIN)
 
-    result = await use_case.execute(command)
+    await use_case.execute(command)
 
     # NullCache always returns None, but the cache.set was invoked
     # In a real Redis scenario the plaintext code would be retrievable

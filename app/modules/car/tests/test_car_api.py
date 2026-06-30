@@ -76,7 +76,14 @@ async def test_get_car_by_uuid_returns_200(app, override_car_deps) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         create_resp = await client.post(
             "/api/v1/cars",
-            json={"owner_id": 1, "make": "Toyota", "model": "Camry", "year": 2023, "color": "Blue", "license_plate": "ABC-123"},
+            json={
+                "owner_id": 1,
+                "make": "Toyota",
+                "model": "Camry",
+                "year": 2023,
+                "color": "Blue",
+                "license_plate": "ABC-123",
+            },
         )
         uuid = create_resp.json()["data"]["uuid"]
 
@@ -104,15 +111,21 @@ async def test_list_cars_by_owner_returns_200(app, override_car_deps) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         await client.post(
             "/api/v1/cars",
-            json={"owner_id": 1, "make": "Toyota", "model": "Camry", "year": 2023, "color": "Blue", "license_plate": "P1"},
+            json={
+                "owner_id": 1, "make": "Toyota", "model": "Camry", "year": 2023, "color": "Blue", "license_plate": "P1"
+            },
         )
         await client.post(
             "/api/v1/cars",
-            json={"owner_id": 1, "make": "Honda", "model": "Civic", "year": 2022, "color": "Red", "license_plate": "P2"},
+            json={
+                "owner_id": 1, "make": "Honda", "model": "Civic", "year": 2022, "color": "Red", "license_plate": "P2"
+            },
         )
         await client.post(
             "/api/v1/cars",
-            json={"owner_id": 2, "make": "Ford", "model": "F-150", "year": 2021, "color": "Black", "license_plate": "P3"},
+            json={
+                "owner_id": 2, "make": "Ford", "model": "F-150", "year": 2021, "color": "Black", "license_plate": "P3"
+            },
         )
 
         response = await client.get("/api/v1/cars/by-owner/1")
@@ -129,11 +142,15 @@ async def test_list_all_cars_returns_200(app, override_car_deps) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         await client.post(
             "/api/v1/cars",
-            json={"owner_id": 1, "make": "Toyota", "model": "Camry", "year": 2023, "color": "Blue", "license_plate": "P1"},
+            json={
+                "owner_id": 1, "make": "Toyota", "model": "Camry", "year": 2023, "color": "Blue", "license_plate": "P1"
+            },
         )
         await client.post(
             "/api/v1/cars",
-            json={"owner_id": 2, "make": "Honda", "model": "Civic", "year": 2022, "color": "Red", "license_plate": "P2"},
+            json={
+                "owner_id": 2, "make": "Honda", "model": "Civic", "year": 2022, "color": "Red", "license_plate": "P2"
+            },
         )
 
         response = await client.get("/api/v1/cars")

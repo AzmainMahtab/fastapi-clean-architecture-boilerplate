@@ -38,11 +38,15 @@ async def get_list_roles_use_case(repo: IRbacRepository = Depends(get_rbac_repo)
     return ListRolesUseCase(rbac_repo=repo)
 
 
-async def get_assign_permission_use_case(repo: IRbacRepository = Depends(get_rbac_repo)) -> AssignPermissionToRoleUseCase:
+async def get_assign_permission_use_case(
+    repo: IRbacRepository = Depends(get_rbac_repo),
+) -> AssignPermissionToRoleUseCase:
     return AssignPermissionToRoleUseCase(rbac_repo=repo)
 
 
-async def get_revoke_permission_use_case(repo: IRbacRepository = Depends(get_rbac_repo)) -> RevokePermissionFromRoleUseCase:
+async def get_revoke_permission_use_case(
+    repo: IRbacRepository = Depends(get_rbac_repo),
+) -> RevokePermissionFromRoleUseCase:
     return RevokePermissionFromRoleUseCase(rbac_repo=repo)
 
 
@@ -58,7 +62,9 @@ async def get_get_role_use_case(repo: IRbacRepository = Depends(get_rbac_repo)) 
     return GetRoleUseCase(rbac_repo=repo)
 
 
-async def get_get_user_permissions_use_case(repo: IRbacRepository = Depends(get_rbac_repo)) -> GetUserPermissionsUseCase:
+async def get_get_user_permissions_use_case(
+    repo: IRbacRepository = Depends(get_rbac_repo),
+) -> GetUserPermissionsUseCase:
     return GetUserPermissionsUseCase(rbac_repo=repo)
 
 

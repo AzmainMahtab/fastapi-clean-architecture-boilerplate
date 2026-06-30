@@ -7,7 +7,9 @@ from app.modules.car.use_cases.create_car import CreateCarUseCase
 @pytest.mark.asyncio
 async def test_create_car_success(car_repo):
     use_case = CreateCarUseCase(car_repo=car_repo)
-    command = CreateCarCommand(owner_id=1, make="Toyota", model="Camry", year=2023, color="Blue", license_plate="ABC-123")
+    command = CreateCarCommand(
+        owner_id=1, make="Toyota", model="Camry", year=2023, color="Blue", license_plate="ABC-123"
+    )
 
     result = await use_case.execute(command)
 

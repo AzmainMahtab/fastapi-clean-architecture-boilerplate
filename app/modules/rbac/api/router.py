@@ -48,15 +48,14 @@ from app.modules.rbac.cqrs.query import (
     ListRolesQuery,
 )
 from app.modules.rbac.domain.exception import (
+    RBAC_EXCEPTIONS,
     PermissionAlreadyAssignedError,
     PermissionAlreadyExistsError,
-    PermissionDeniedError,
     PermissionNotFoundError,
     RoleAlreadyAssignedError,
     RoleAlreadyExistsError,
     RoleNotAssignedError,
     RoleNotFoundError,
-    RBAC_EXCEPTIONS,
 )
 from app.modules.rbac.use_cases.assign_permission import AssignPermissionToRoleUseCase
 from app.modules.rbac.use_cases.assign_role import AssignRoleUseCase

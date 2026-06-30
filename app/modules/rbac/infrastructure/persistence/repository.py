@@ -6,12 +6,7 @@ from app.core.pagination import PaginationParams
 from app.modules.rbac.domain.entities import Permission, Role
 from app.modules.rbac.domain.interfaces import IRbacRepository
 from app.modules.rbac.infrastructure.persistence.mapper import map_permission_to_domain, map_role_to_domain
-from app.modules.rbac.infrastructure.persistence.models import (
-    PermissionModel,
-    RoleModel,
-    role_permissions,
-    user_roles,
-)
+from app.modules.rbac.infrastructure.persistence.models import PermissionModel, RoleModel, role_permissions, user_roles
 
 
 class SQLAlchemyRbacRepository(IRbacRepository):

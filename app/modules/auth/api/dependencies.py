@@ -7,7 +7,12 @@ from app.core.cache import ICacheService
 from app.core.database import get_db
 from app.core.event_bus import IEventBus
 from app.core.jwt import JWTService
-from app.modules.auth.domain.exception import InvalidTokenError, PermissionDeniedError, TokenBlacklistedError, TokenExpiredError
+from app.modules.auth.domain.exception import (
+    InvalidTokenError,
+    PermissionDeniedError,
+    TokenBlacklistedError,
+    TokenExpiredError,
+)
 from app.modules.auth.use_cases.login import LoginUseCase
 from app.modules.auth.use_cases.logout import LogoutUseCase
 from app.modules.auth.use_cases.profile import GetProfileUseCase

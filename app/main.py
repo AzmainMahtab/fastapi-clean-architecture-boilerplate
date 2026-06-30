@@ -28,6 +28,7 @@ from app.modules.otp.api.router import router as otp_router
 from app.modules.otp.infrastructure.event_handlers import create_generate_login_otp_handler
 from app.modules.owner.api.router import router as owner_router
 from app.modules.rbac.api.router import router as rbac_router
+from app.modules.rbac.domain.exception import RbacError
 from app.modules.user.api.router import router as user_router
 from app.modules.user.domain.events import UserUpdatedEvent
 
@@ -66,10 +67,6 @@ app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
-
-# RBAC exception handler uses the RbacError base class
-from app.modules.rbac.domain.exception import RbacError
-
 app.add_exception_handler(RbacError, rbac_exception_handler)
 
 app.add_middleware(

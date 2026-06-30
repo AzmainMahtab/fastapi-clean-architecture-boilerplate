@@ -23,7 +23,9 @@ async def test_list_all_cars_paginated(car_repo):
     uc_create = CreateCarUseCase(car_repo=car_repo)
     for i in range(5):
         await uc_create.execute(
-            CreateCarCommand(owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"PLATE-{i}")
+            CreateCarCommand(
+                owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"PLATE-{i}"
+            )
         )
 
     use_case = ListCarsUseCase(car_repo=car_repo)
@@ -52,12 +54,16 @@ async def test_list_cars_by_owner_with_cars(car_repo):
     # Owner 1 has 3 cars
     for i in range(3):
         await uc_create.execute(
-            CreateCarCommand(owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"P1-{i}")
+            CreateCarCommand(
+                owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"P1-{i}"
+            )
         )
     # Owner 2 has 2 cars
     for i in range(2):
         await uc_create.execute(
-            CreateCarCommand(owner_id=2, make="Honda", model=f"Model {i}", year=2022, color="Red", license_plate=f"P2-{i}")
+            CreateCarCommand(
+                owner_id=2, make="Honda", model=f"Model {i}", year=2022, color="Red", license_plate=f"P2-{i}"
+            )
         )
 
     use_case = ListCarsUseCase(car_repo=car_repo)
@@ -76,7 +82,9 @@ async def test_list_cars_by_owner_paginated(car_repo):
     uc_create = CreateCarUseCase(car_repo=car_repo)
     for i in range(5):
         await uc_create.execute(
-            CreateCarCommand(owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"P1-{i}")
+            CreateCarCommand(
+                owner_id=1, make="Toyota", model=f"Model {i}", year=2023, color="Blue", license_plate=f"P1-{i}"
+            )
         )
 
     use_case = ListCarsUseCase(car_repo=car_repo)
