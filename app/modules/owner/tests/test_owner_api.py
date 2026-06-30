@@ -5,11 +5,27 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app as fastapi_app
+from app.modules.auth.api.dependencies import require_authenticated_user
 from app.modules.owner.api.dependencies import get_create_owner_use_case, get_get_owner_use_case, get_list_owners_use_case
 from app.modules.owner.tests.conftest import InMemoryOwnerRepository
 from app.modules.owner.use_cases.create_owner import CreateOwnerUseCase
 from app.modules.owner.use_cases.get_owner import GetOwnerUseCase
 from app.modules.owner.use_cases.list_owners import ListOwnersUseCase
+from app.modules.user.domain.entities import User, UserStatus
+from app.modules.user.domain.value_objects import Email, HashedPassword, PhoneNumber
+
+
+def _mock_superuser() -> User:
+    return User(
+        id=1,
+        uuid="mock-user-uuid",
+        email=Email("mock@example.com"),
+        hashed_password=HashedPassword("mock"),
+        username="mockuser",
+        phone_number=PhoneNumber("+1234567890"),
+        is_superuser=True,
+        status=UserStatus.ACTIVE,
+    )
 
 
 @pytest.fixture
@@ -22,6 +38,7 @@ def override_owner_deps(app: FastAPI, owner_repo: InMemoryOwnerRepository) -> Ge
     app.dependency_overrides[get_create_owner_use_case] = lambda: CreateOwnerUseCase(owner_repo=owner_repo)
     app.dependency_overrides[get_get_owner_use_case] = lambda: GetOwnerUseCase(owner_repo=owner_repo)
     app.dependency_overrides[get_list_owners_use_case] = lambda: ListOwnersUseCase(owner_repo=owner_repo)
+    app.dependency_overrides[require_authenticated_user] = _mock_superuser
     yield
     app.dependency_overrides.clear()
 

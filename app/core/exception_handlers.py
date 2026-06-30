@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import AppException
 from app.core.response import ErrorEnvelope, ErrorItem
 from app.modules.auth.domain.exception import AUTH_EXCEPTIONS, AuthenticationError
+from app.modules.rbac.domain.exception import RBAC_EXCEPTIONS, RbacError
 
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
@@ -62,6 +63,21 @@ async def auth_exception_handler(request: Request, exc: AuthenticationError) -> 
     as the single source of truth for error codes and HTTP statuses.
     """
     code, status_code = AUTH_EXCEPTIONS.get(type(exc), ("AUTH_ERROR", 401))
+    return JSONResponse(
+        status_code=status_code,
+        content=ErrorEnvelope(
+            status="fail", statusCode=status_code, errors=[ErrorItem(code=code, message=str(exc) or None)]
+        ).model_dump(exclude_none=True, mode="json"),
+    )
+
+
+async def rbac_exception_handler(request: Request, exc: RbacError) -> JSONResponse:
+    """Handles ``RbacError`` raised by RBAC use cases and guards.
+
+    Uses the ``RBAC_EXCEPTIONS`` mapping from the RBAC domain module
+    as the single source of truth for error codes and HTTP statuses.
+    """
+    code, status_code = RBAC_EXCEPTIONS.get(type(exc), ("RBAC_ERROR", 400))
     return JSONResponse(
         status_code=status_code,
         content=ErrorEnvelope(

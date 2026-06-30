@@ -11,6 +11,7 @@ from app.core.exception_handlers import (
     app_exception_handler,
     auth_exception_handler,
     http_exception_handler,
+    rbac_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
@@ -26,6 +27,7 @@ from app.modules.car.api.router import router as car_router
 from app.modules.otp.api.router import router as otp_router
 from app.modules.otp.infrastructure.event_handlers import create_generate_login_otp_handler
 from app.modules.owner.api.router import router as owner_router
+from app.modules.rbac.api.router import router as rbac_router
 from app.modules.user.api.router import router as user_router
 from app.modules.user.domain.events import UserUpdatedEvent
 
@@ -65,6 +67,11 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
+# RBAC exception handler uses the RbacError base class
+from app.modules.rbac.domain.exception import RbacError
+
+app.add_exception_handler(RbacError, rbac_exception_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS_LIST,
@@ -89,3 +96,4 @@ app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(otp_router, prefix=settings.API_V1_PREFIX)
 app.include_router(owner_router, prefix=settings.API_V1_PREFIX)
 app.include_router(car_router, prefix=settings.API_V1_PREFIX)
+app.include_router(rbac_router, prefix=settings.API_V1_PREFIX)

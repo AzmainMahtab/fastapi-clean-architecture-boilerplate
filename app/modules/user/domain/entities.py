@@ -30,6 +30,7 @@ class User:
     first_name: str | None = None
     last_name: str | None = None
     status: UserStatus = UserStatus.PENDING_VERIFICATION
+    is_superuser: bool = False
 
     created_at: datetime | None = None
     updated_at: datetime | None = None

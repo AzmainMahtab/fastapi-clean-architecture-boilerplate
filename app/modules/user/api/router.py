@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
+from app.core.auth import require_permission
 from app.core.exceptions import AppException
 from app.core.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PaginationParams
 from app.core.rate_limit import rate_limit
@@ -105,8 +106,10 @@ async def register(request: RegisterRequest, use_case: RegisterUserUseCase = Dep
     responses={
         404: {"model": ErrorEnvelope, "description": "User not found"},
         422: {"model": ErrorEnvelope, "description": "Cannot set inactive status"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
     },
     summary="Update user status",
+    dependencies=[Depends(require_permission("user:update"))],
 )
 async def update_status(
     uuid: str, request: UpdateUserStatusRequest, use_case: UpdateUserStatusUseCase = Depends(get_update_status_use_case)
@@ -128,8 +131,12 @@ async def update_status(
 @router.delete(
     "/{uuid}",
     response_model=SuccessEnvelope[UserResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "User not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "User not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Soft delete a user",
+    dependencies=[Depends(require_permission("user:delete"))],
 )
 async def delete_user(uuid: str, use_case: DeleteUserUseCase = Depends(get_delete_use_case)):
     """Soft-delete a user by setting their status to **inactive**
@@ -147,8 +154,12 @@ async def delete_user(uuid: str, use_case: DeleteUserUseCase = Depends(get_delet
 @router.delete(
     "/{uuid}/prune",
     response_model=SuccessEnvelope[UserResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "User not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "User not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Permanently delete a user",
+    dependencies=[Depends(require_permission("user:delete"))],
 )
 async def prune_user(uuid: str, use_case: PruneUserUseCase = Depends(get_prune_use_case)):
     """Permanently remove a user from the database.
@@ -168,8 +179,12 @@ async def prune_user(uuid: str, use_case: PruneUserUseCase = Depends(get_prune_u
 @router.get(
     "/by-uuid/{uuid}",
     response_model=SuccessEnvelope[UserResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "User not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "User not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get user by UUID",
+    dependencies=[Depends(require_permission("user:read"))],
 )
 async def get_by_uuid(uuid: str, use_case: GetUserUseCase = Depends(get_user_query_use_case)):
     """Look up a user by their UUID v7 identifier."""
@@ -185,8 +200,12 @@ async def get_by_uuid(uuid: str, use_case: GetUserUseCase = Depends(get_user_que
 @router.get(
     "/by-username/{username}",
     response_model=SuccessEnvelope[UserResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "User not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "User not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get user by username",
+    dependencies=[Depends(require_permission("user:read"))],
 )
 async def get_by_username(username: str, use_case: GetUserUseCase = Depends(get_user_query_use_case)):
     """Look up a user by their unique username."""
@@ -202,8 +221,12 @@ async def get_by_username(username: str, use_case: GetUserUseCase = Depends(get_
 @router.get(
     "/by-email/{email}",
     response_model=SuccessEnvelope[UserResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "User not found"}},
+    responses={
+        404: {"model": ErrorEnvelope, "description": "User not found"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
+    },
     summary="Get user by email",
+    dependencies=[Depends(require_permission("user:read"))],
 )
 async def get_by_email(email: str, use_case: GetUserUseCase = Depends(get_user_query_use_case)):
     """Look up a user by their email address."""
@@ -222,8 +245,10 @@ async def get_by_email(email: str, use_case: GetUserUseCase = Depends(get_user_q
     responses={
         404: {"model": ErrorEnvelope, "description": "User not found"},
         422: {"model": ErrorEnvelope, "description": "User was not deleted"},
+        403: {"model": ErrorEnvelope, "description": "Permission denied"},
     },
     summary="Restore a soft-deleted user",
+    dependencies=[Depends(require_permission("user:update"))],
 )
 async def restore_user(uuid: str, use_case: RestoreUserUseCase = Depends(get_restore_user_use_case)):
     """Restore a soft-deleted user by their UUID.
@@ -240,7 +265,13 @@ async def restore_user(uuid: str, use_case: RestoreUserUseCase = Depends(get_res
     return SuccessEnvelope(statusCode=200, data=UserResponse.from_entity(result.user))
 
 
-@router.get("", response_model=SuccessEnvelope[UserListResponse], summary="List all users")
+@router.get(
+    "",
+    response_model=SuccessEnvelope[UserListResponse],
+    responses={403: {"model": ErrorEnvelope, "description": "Permission denied"}},
+    summary="List all users",
+    dependencies=[Depends(require_permission("user:read"))],
+)
 async def list_users(
     status: UserStatus | None = Query(default=None, description="Filter by status."),
     include_deleted: bool = Query(default=False, description="Include soft-deleted users in the results."),

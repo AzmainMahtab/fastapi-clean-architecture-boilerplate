@@ -24,4 +24,5 @@ class UserModel(BaseModelMixin, Base):
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending_verification")
+    is_superuser: Mapped[bool] = mapped_column(default=False, nullable=False)
 

@@ -39,6 +39,9 @@ class InMemoryUserRepository(IUserRepository):
         self._users[user.id] = user
         return user
 
+    async def get_with_permissions(self, user_id: int) -> User | None:
+        return self._users.get(user_id)
+
     async def update(self, user: User) -> User:
         assert user.id is not None
         self._users[user.id] = user

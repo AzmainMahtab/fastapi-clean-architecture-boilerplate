@@ -7,11 +7,13 @@ from app.core.cache import ICacheService
 from app.core.database import get_db
 from app.core.event_bus import IEventBus
 from app.core.jwt import JWTService
-from app.modules.auth.domain.exception import InvalidTokenError, TokenBlacklistedError, TokenExpiredError
+from app.modules.auth.domain.exception import InvalidTokenError, PermissionDeniedError, TokenBlacklistedError, TokenExpiredError
 from app.modules.auth.use_cases.login import LoginUseCase
 from app.modules.auth.use_cases.logout import LogoutUseCase
 from app.modules.auth.use_cases.profile import GetProfileUseCase
 from app.modules.auth.use_cases.refresh import RefreshTokenUseCase
+from app.modules.rbac.domain.interfaces import IRbacRepository
+from app.modules.rbac.infrastructure.persistence.repository import SQLAlchemyRbacRepository
 from app.modules.user.domain.entities import User, UserStatus
 from app.modules.user.domain.interfaces import IUserRepository
 from app.modules.user.infrastructure.persistence.repository import SQLAlchemyUserRepository
@@ -66,6 +68,18 @@ async def get_user_repo(db: AsyncSession = Depends(get_db)) -> IUserRepository:
         A ``SQLAlchemyUserRepository`` bound to the session.
     """
     return SQLAlchemyUserRepository(db)
+
+
+async def get_rbac_repo(db: AsyncSession = Depends(get_db)) -> IRbacRepository:
+    """Dependency provider for the RBAC repository.
+
+    Args:
+        db: An async SQLAlchemy session.
+
+    Returns:
+        A ``SQLAlchemyRbacRepository`` bound to the session.
+    """
+    return SQLAlchemyRbacRepository(db)
 
 
 async def get_login_use_case(
@@ -236,3 +250,29 @@ async def require_authenticated_user(
         raise InvalidTokenError("Account is deactivated.")
 
     return user
+
+
+def require_permission(permission: str):
+    """Factory that returns a FastAPI dependency enforcing a specific permission.
+
+    Usage::
+
+        @router.post("/users", dependencies=[Depends(require_permission("user:create"))])
+        async def create_user(...):
+            ...
+
+    Superusers bypass all permission checks automatically.
+    """
+
+    async def _dependency(
+        user: User = Depends(require_authenticated_user),
+        rbac_repo: IRbacRepository = Depends(get_rbac_repo),
+    ) -> User:
+        if user.is_superuser:
+            return user
+        has_perm = await rbac_repo.user_has_permission(user.id, permission)
+        if not has_perm:
+            raise PermissionDeniedError(f"Permission '{permission}' required.")
+        return user
+
+    return _dependency
