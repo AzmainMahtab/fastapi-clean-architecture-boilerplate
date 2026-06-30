@@ -86,9 +86,30 @@ class UserPermissionsResponse(BaseModel):
     permissions: list[str] = Field(default_factory=list, description="List of permission names.")
 
 
+class UserRoleAssignmentItem(BaseModel):
+    role_name: str = Field(description="Role name.")
+    assigned_by: int | None = Field(default=None, description="User ID who assigned the role.")
+    assigned_at: datetime | None = Field(default=None, description="Timestamp when the role was assigned.")
+
+
 class UserRolesResponse(BaseModel):
     user_id: int = Field(description="User ID.")
-    roles: list[str] = Field(default_factory=list, description="List of role names.")
+    roles: list[UserRoleAssignmentItem] = Field(
+        default_factory=list, description="Roles assigned to the user with audit metadata."
+    )
+
+
+class RolePermissionAssignmentItem(BaseModel):
+    permission: PermissionResponse = Field(description="Permission details.")
+    assigned_by: int | None = Field(default=None, description="User ID who assigned the permission.")
+    assigned_at: datetime | None = Field(default=None, description="Timestamp when the permission was assigned.")
+
+
+class RolePermissionsResponse(BaseModel):
+    role_uuid: str = Field(description="Role UUID.")
+    permissions: list[RolePermissionAssignmentItem] = Field(
+        default_factory=list, description="Permissions assigned to the role with audit metadata."
+    )
 
 
 PermissionListResponse = PaginatedResponse[PermissionResponse]

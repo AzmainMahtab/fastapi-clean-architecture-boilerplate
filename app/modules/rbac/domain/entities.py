@@ -32,3 +32,21 @@ class Role:
 
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+@dataclass
+class UserRoleAssignment:
+    """Domain Entity: A role assigned to a user with audit metadata."""
+
+    role: Role
+    assigned_by: int | None = None
+    assigned_at: datetime | None = None
+
+
+@dataclass
+class RolePermissionAssignment:
+    """Domain Entity: A permission assigned to a role with audit metadata."""
+
+    permission: Permission
+    assigned_by: int | None = None
+    assigned_at: datetime | None = None

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.core.pagination import Page
-from app.modules.rbac.domain.entities import Permission, Role
+from app.modules.rbac.domain.entities import Permission, Role, RolePermissionAssignment, UserRoleAssignment
 
 
 @dataclass(frozen=True)
@@ -37,3 +37,13 @@ class UserRolesResult:
 @dataclass(frozen=True)
 class CheckPermissionResult:
     has_permission: bool
+
+
+@dataclass(frozen=True)
+class UserRoleAssignmentsResult:
+    assignments: list[UserRoleAssignment]
+
+
+@dataclass(frozen=True)
+class RolePermissionAssignmentsResult:
+    assignments: list[RolePermissionAssignment]

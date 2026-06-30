@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.core.auth import require_authenticated_user
+from app.core.auth import require_authenticated_user, require_permission
 from app.core.exceptions import AppException
 from app.core.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PaginationParams
 from app.core.response import CleanRoute, ErrorEnvelope, SuccessEnvelope
@@ -10,8 +10,10 @@ from app.modules.rbac.api.dependencies import (
     get_check_permission_use_case,
     get_create_permission_use_case,
     get_create_role_use_case,
+    get_get_role_permission_assignments_use_case,
     get_get_role_use_case,
     get_get_user_permissions_use_case,
+    get_get_user_role_assignments_use_case,
     get_get_user_roles_use_case,
     get_list_permissions_use_case,
     get_list_roles_use_case,
@@ -28,8 +30,11 @@ from app.modules.rbac.api.schemas import (
     RevokePermissionRequest,
     RevokeRoleRequest,
     RoleListResponse,
+    RolePermissionsResponse,
+    RolePermissionAssignmentItem,
     RoleResponse,
     UserPermissionsResponse,
+    UserRoleAssignmentItem,
     UserRolesResponse,
 )
 from app.modules.rbac.cqrs.command import (
@@ -52,6 +57,7 @@ from app.modules.rbac.domain.exception import (
     RBAC_EXCEPTIONS,
     PermissionAlreadyAssignedError,
     PermissionAlreadyExistsError,
+    PermissionNotAssignedError,
     PermissionNotFoundError,
     RoleAlreadyAssignedError,
     RoleAlreadyExistsError,
@@ -64,7 +70,9 @@ from app.modules.rbac.use_cases.check_permission import CheckPermissionUseCase
 from app.modules.rbac.use_cases.create_permission import CreatePermissionUseCase
 from app.modules.rbac.use_cases.create_role import CreateRoleUseCase
 from app.modules.rbac.use_cases.get_role import GetRoleUseCase
+from app.modules.rbac.use_cases.get_role_permission_assignments import GetRolePermissionAssignmentsUseCase
 from app.modules.rbac.use_cases.get_user_permissions import GetUserPermissionsUseCase
+from app.modules.rbac.use_cases.get_user_role_assignments import GetUserRoleAssignmentsUseCase
 from app.modules.rbac.use_cases.get_user_roles import GetUserRolesUseCase
 from app.modules.rbac.use_cases.list_permissions import ListPermissionsUseCase
 from app.modules.rbac.use_cases.list_roles import ListRolesUseCase
@@ -88,7 +96,10 @@ def _map_rbac_error(exc: Exception) -> AppException:
     "/permissions",
     response_model=SuccessEnvelope[PermissionResponse],
     status_code=201,
+    dependencies=[Depends(require_permission("rbac:permission:create"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         409: {"model": ErrorEnvelope, "description": "Permission already exists"},
     },
     summary="Create a new permission",
@@ -114,6 +125,11 @@ async def create_permission(
 @router.get(
     "/permissions",
     response_model=SuccessEnvelope[PermissionListResponse],
+    dependencies=[Depends(require_permission("rbac:permission:list"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+    },
     summary="List all permissions",
 )
 async def list_permissions(
@@ -143,7 +159,10 @@ async def list_permissions(
     "/roles",
     response_model=SuccessEnvelope[RoleResponse],
     status_code=201,
+    dependencies=[Depends(require_permission("rbac:role:create"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         409: {"model": ErrorEnvelope, "description": "Role already exists"},
     },
     summary="Create a new role",
@@ -164,6 +183,11 @@ async def create_role(
 @router.get(
     "/roles",
     response_model=SuccessEnvelope[RoleListResponse],
+    dependencies=[Depends(require_permission("rbac:role:list"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+    },
     summary="List all roles",
 )
 async def list_roles(
@@ -190,7 +214,12 @@ async def list_roles(
 @router.get(
     "/roles/{uuid}",
     response_model=SuccessEnvelope[RoleResponse],
-    responses={404: {"model": ErrorEnvelope, "description": "Role not found"}},
+    dependencies=[Depends(require_permission("rbac:role:read"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+        404: {"model": ErrorEnvelope, "description": "Role not found"},
+    },
     summary="Get role by UUID",
 )
 async def get_role_by_uuid(
@@ -211,7 +240,10 @@ async def get_role_by_uuid(
 @router.post(
     "/roles/{role_uuid}/permissions",
     response_model=SuccessEnvelope[dict],
+    dependencies=[Depends(require_permission("rbac:role:assign_permission"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         404: {"model": ErrorEnvelope, "description": "Role or permission not found"},
         409: {"model": ErrorEnvelope, "description": "Permission already assigned"},
     },
@@ -239,8 +271,12 @@ async def assign_permission_to_role(
 @router.delete(
     "/roles/{role_uuid}/permissions",
     response_model=SuccessEnvelope[dict],
+    dependencies=[Depends(require_permission("rbac:role:revoke_permission"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         404: {"model": ErrorEnvelope, "description": "Role or permission not found"},
+        400: {"model": ErrorEnvelope, "description": "Permission not assigned to role"},
     },
     summary="Revoke a permission from a role",
 )
@@ -252,10 +288,47 @@ async def revoke_permission_from_role(
     command = RevokePermissionFromRoleCommand(role_uuid=role_uuid, permission_uuid=request.permission_uuid)
     try:
         await use_case.execute(command)
-    except (RoleNotFoundError, PermissionNotFoundError) as e:
+    except (RoleNotFoundError, PermissionNotFoundError, PermissionNotAssignedError) as e:
         raise _map_rbac_error(e) from e
 
     return SuccessEnvelope(statusCode=200, data={"message": "Permission revoked from role."})
+
+
+@router.get(
+    "/roles/{role_uuid}/permissions",
+    response_model=SuccessEnvelope[RolePermissionsResponse],
+    dependencies=[Depends(require_permission("rbac:role:read_permissions"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+        404: {"model": ErrorEnvelope, "description": "Role not found"},
+    },
+    summary="Get permissions assigned to a role with audit metadata",
+)
+async def get_role_permissions(
+    role_uuid: str,
+    use_case: GetRolePermissionAssignmentsUseCase = Depends(get_get_role_permission_assignments_use_case),
+):
+    query = GetRoleByUuidQuery(uuid=role_uuid)
+    try:
+        result = await use_case.by_uuid(query)
+    except RoleNotFoundError as e:
+        raise _map_rbac_error(e) from e
+
+    return SuccessEnvelope(
+        statusCode=200,
+        data=RolePermissionsResponse(
+            role_uuid=role_uuid,
+            permissions=[
+                RolePermissionAssignmentItem(
+                    permission=PermissionResponse.from_entity(a.permission),
+                    assigned_by=a.assigned_by,
+                    assigned_at=a.assigned_at,
+                )
+                for a in result.assignments
+            ],
+        ),
+    )
 
 
 # User <-> Role
@@ -263,7 +336,10 @@ async def revoke_permission_from_role(
 @router.post(
     "/roles/{role_uuid}/users",
     response_model=SuccessEnvelope[dict],
+    dependencies=[Depends(require_permission("rbac:role:assign_user"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         404: {"model": ErrorEnvelope, "description": "Role not found"},
         409: {"model": ErrorEnvelope, "description": "Role already assigned"},
     },
@@ -291,7 +367,10 @@ async def assign_role_to_user(
 @router.delete(
     "/roles/{role_uuid}/users",
     response_model=SuccessEnvelope[dict],
+    dependencies=[Depends(require_permission("rbac:role:revoke_user"))],
     responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
         404: {"model": ErrorEnvelope, "description": "Role not found"},
         400: {"model": ErrorEnvelope, "description": "Role not assigned to user"},
     },
@@ -316,6 +395,11 @@ async def revoke_role_from_user(
 @router.get(
     "/users/{user_id}/permissions",
     response_model=SuccessEnvelope[UserPermissionsResponse],
+    dependencies=[Depends(require_permission("rbac:user:read_permissions"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+    },
     summary="Get all permissions for a user",
 )
 async def get_user_permissions(
@@ -336,11 +420,16 @@ async def get_user_permissions(
 @router.get(
     "/users/{user_id}/roles",
     response_model=SuccessEnvelope[UserRolesResponse],
-    summary="Get all roles for a user",
+    dependencies=[Depends(require_permission("rbac:user:read_roles"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+    },
+    summary="Get all roles for a user with audit metadata",
 )
 async def get_user_roles(
     user_id: int,
-    use_case: GetUserRolesUseCase = Depends(get_get_user_roles_use_case),
+    use_case: GetUserRoleAssignmentsUseCase = Depends(get_get_user_role_assignments_use_case),
 ):
     query = GetUserRolesQuery(user_id=user_id)
     result = await use_case.execute(query)
@@ -348,7 +437,14 @@ async def get_user_roles(
         statusCode=200,
         data=UserRolesResponse(
             user_id=user_id,
-            roles=[r.name for r in result.roles],
+            roles=[
+                UserRoleAssignmentItem(
+                    role_name=a.role.name,
+                    assigned_by=a.assigned_by,
+                    assigned_at=a.assigned_at,
+                )
+                for a in result.assignments
+            ],
         ),
     )
 
@@ -356,6 +452,11 @@ async def get_user_roles(
 @router.get(
     "/users/{user_id}/check",
     response_model=SuccessEnvelope[dict],
+    dependencies=[Depends(require_permission("rbac:user:check_permission"))],
+    responses={
+        401: {"model": ErrorEnvelope, "description": "Unauthorized"},
+        403: {"model": ErrorEnvelope, "description": "Forbidden"},
+    },
     summary="Check if a user has a specific permission",
 )
 async def check_user_permission(
